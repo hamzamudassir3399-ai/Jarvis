@@ -61,7 +61,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
                   {t.dueDate && <span>· due {formatDue(t.dueDate)}</span>}
                 </div>
               </div>
-              <button onClick={() => removeTask(t.id)} className="invisible text-zinc-500 hover:text-rose-400 group-hover:visible" aria-label="Delete task">
+              <button onClick={() => removeTask(t.id)} className="text-zinc-600 hover:text-rose-400" aria-label="Delete task">
                 <Trash2 size={14} />
               </button>
             </li>
@@ -82,7 +82,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
                 <div className="truncate text-zinc-100">{r.message}</div>
                 <div className="text-[11px] text-zinc-500">{formatDue(r.time)}</div>
               </div>
-              <button onClick={() => removeReminder(r.id)} className="invisible text-zinc-500 hover:text-rose-400 group-hover:visible" aria-label="Cancel reminder">
+              <button onClick={() => removeReminder(r.id)} className="text-zinc-600 hover:text-rose-400" aria-label="Cancel reminder">
                 <Trash2 size={14} />
               </button>
             </li>
@@ -101,7 +101,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
             <li key={n.id} className="group rounded-md border border-zinc-800 bg-zinc-900 p-2">
               <div className="flex items-start justify-between gap-2">
                 <div className="font-medium text-zinc-100">{n.title}</div>
-                <button onClick={() => removeNote(n.id)} className="invisible text-zinc-500 hover:text-rose-400 group-hover:visible" aria-label="Delete note">
+                <button onClick={() => removeNote(n.id)} className="text-zinc-600 hover:text-rose-400" aria-label="Delete note">
                   <Trash2 size={14} />
                 </button>
               </div>
