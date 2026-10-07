@@ -1,0 +1,6 @@
+{
+  "name": "Jarvis - Daily Task Agent",
+  "description": "A Gemini-powered personal assistant that manages your to-dos, notes and reminders through chat.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
