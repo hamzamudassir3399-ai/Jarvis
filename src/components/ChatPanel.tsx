@@ -1,7 +1,7 @@
 import type { Content } from '@google/genai';
 import { AlertTriangle, PanelRight, Send, Sparkles, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { checkHealth, runAgentTurn } from '../services/agent';
+import { AgentTurnError, checkHealth, runAgentTurn } from '../services/agent';
 import { newId } from '../lib/store';
 import { useReminders } from '../lib/useReminders';
 import type { ChatMessage, ToolCallRecord } from '../types';
@@ -67,8 +67,10 @@ export function ChatPanel({ onTogglePanel }: { onTogglePanel: () => void }) {
         m.map((msg) => (msg.id === pendingId ? { ...msg, text: result.text, pending: false, toolCalls: result.toolCalls } : msg)),
       );
     } catch (e: any) {
+      const ran = e instanceof AgentTurnError ? e.toolCalls.map((c) => c.name) : [];
+      const prefix = ran.length ? `Ran ${[...new Set(ran)].join(', ')}, but Gemini failed to reply: ` : '';
       setMessages((m) =>
-        m.map((msg) => (msg.id === pendingId ? { ...msg, text: e?.message || 'Something went wrong.', pending: false, error: true } : msg)),
+        m.map((msg) => (msg.id === pendingId ? { ...msg, text: prefix + (e?.message || 'Something went wrong.'), pending: false, error: true } : msg)),
       );
     } finally {
       setBusy(false);

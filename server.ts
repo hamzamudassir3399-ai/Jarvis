@@ -49,6 +49,23 @@ function isRetryable(error: any): boolean {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Turns the SDK's raw JSON error string into an HTTP status and a human-readable message. */
+function describeGeminiError(error: any): { status: number; message: string } {
+  const raw = String(error?.message ?? 'Gemini request failed');
+  let status = Number(error?.status ?? error?.code) || 500;
+  let message = raw;
+  try {
+    const parsed = JSON.parse(raw.slice(raw.indexOf('{')));
+    if (parsed?.error?.code) status = Number(parsed.error.code);
+    if (parsed?.error?.message) message = String(parsed.error.message);
+  } catch {
+    /* not JSON */
+  }
+  if (status === 429) message = `Gemini quota or rate limit reached. ${message}`;
+  if (![400, 401, 403, 404, 429, 500, 503].includes(status)) status = 502;
+  return { status, message };
+}
+
 /** Tries each configured model in turn (most recently successful first), with one retry, so a 503 "high demand" on one model does not fail the request. */
 let preferredModel = MODELS[0];
 
@@ -108,7 +125,8 @@ app.post('/api/chat', async (req, res) => {
     });
   } catch (error: any) {
     console.error('Gemini chat error:', error);
-    res.status(500).json({ error: error?.message || 'Gemini request failed' });
+    const { status, message } = describeGeminiError(error);
+    res.status(status).json({ error: message });
   }
 });
 

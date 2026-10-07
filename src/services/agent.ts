@@ -33,6 +33,12 @@ export interface AgentTurnResult {
  * Runs one agent turn: sends the conversation to Gemini, executes any tool
  * calls locally, feeds results back, and repeats until the model answers in text.
  */
+export class AgentTurnError extends Error {
+  constructor(message: string, public toolCalls: ToolCallRecord[]) {
+    super(message);
+  }
+}
+
 export async function runAgentTurn(
   history: Content[],
   userMessage: string,
@@ -42,7 +48,12 @@ export async function runAgentTurn(
   const toolCalls: ToolCallRecord[] = [];
 
   for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
-    const response = await callServer(contents);
+    let response: ChatResponse;
+    try {
+      response = await callServer(contents);
+    } catch (e: any) {
+      throw new AgentTurnError(e?.message || 'Request failed', toolCalls);
+    }
     contents.push(response.content);
 
     if (!response.functionCalls.length) {
