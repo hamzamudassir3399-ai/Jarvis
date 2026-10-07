@@ -62,6 +62,7 @@ export function ChatPanel({ onTogglePanel }: { onTogglePanel: () => void }) {
     try {
       const result = await runAgentTurn(history, trimmed, onToolCall);
       setHistory(result.history);
+      if (result.model) setHealth({ configured: true, model: result.model });
       setMessages((m) =>
         m.map((msg) => (msg.id === pendingId ? { ...msg, text: result.text, pending: false, toolCalls: result.toolCalls } : msg)),
       );

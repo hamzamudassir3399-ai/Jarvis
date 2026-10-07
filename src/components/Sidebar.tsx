@@ -31,7 +31,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   const removeReminder = (id: string) => setState((s) => ({ ...s, reminders: s.reminders.filter((r) => r.id !== id) }));
 
   return (
-    <aside className="flex h-full w-full flex-col overflow-y-auto border-l border-zinc-800 bg-zinc-900/60 p-4 text-sm">
+    <aside className="flex h-full w-full flex-col overflow-y-auto border-l border-zinc-800 bg-zinc-900 p-4 text-sm">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Your day</h2>
         {onClose && (

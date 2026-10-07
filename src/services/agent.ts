@@ -6,6 +6,7 @@ interface ChatResponse {
   content: Content;
   text: string;
   functionCalls: FunctionCall[];
+  model?: string;
 }
 
 const MAX_TOOL_ROUNDS = 6;
@@ -25,6 +26,7 @@ export interface AgentTurnResult {
   text: string;
   toolCalls: ToolCallRecord[];
   history: Content[];
+  model?: string;
 }
 
 /**
@@ -44,7 +46,7 @@ export async function runAgentTurn(
     contents.push(response.content);
 
     if (!response.functionCalls.length) {
-      return { text: response.text || '(no response)', toolCalls, history: contents };
+      return { text: response.text || '(no response)', toolCalls, history: contents, model: response.model };
     }
 
     const responseParts: Part[] = response.functionCalls.map((call) => {

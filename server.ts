@@ -16,7 +16,6 @@ const DEFAULT_MODELS = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-flash-la
 const MODELS = Array.from(
   new Set([...(process.env.GEMINI_MODEL ? process.env.GEMINI_MODEL.split(',') : []), ...DEFAULT_MODELS].map((m) => m.trim()).filter(Boolean)),
 );
-const MODEL = MODELS[0];
 
 app.use(express.json({ limit: '5mb' }));
 
@@ -39,7 +38,7 @@ Rules:
 - Be proactive: if a task seems time-sensitive, offer to set a reminder.`;
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, configured: Boolean(ai), model: MODEL, models: MODELS });
+  res.json({ ok: true, configured: Boolean(ai), model: preferredModel, models: MODELS });
 });
 
 function isRetryable(error: any): boolean {
@@ -50,10 +49,13 @@ function isRetryable(error: any): boolean {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** Tries each configured model in turn, with one retry, so a 503 "high demand" on one model does not fail the request. */
+/** Tries each configured model in turn (most recently successful first), with one retry, so a 503 "high demand" on one model does not fail the request. */
+let preferredModel = MODELS[0];
+
 async function generateWithFallback(client: GoogleGenAI, contents: Content[], systemInstruction: string) {
   let lastError: any;
-  for (const model of MODELS) {
+  const order = [preferredModel, ...MODELS.filter((m) => m !== preferredModel)];
+  for (const model of order) {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const response = await client.models.generateContent({
@@ -65,6 +67,7 @@ async function generateWithFallback(client: GoogleGenAI, contents: Content[], sy
             temperature: 0.4,
           },
         });
+        preferredModel = model;
         return { response, model };
       } catch (error: any) {
         lastError = error;
