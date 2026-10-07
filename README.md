@@ -14,7 +14,7 @@ A Gemini-powered personal assistant for everyday tasks. Chat with Jarvis to mana
 
 - React 19 + Vite + Tailwind CSS 4 (client)
 - Express + `@google/genai` (server, keeps your API key off the client)
-- Model: `gemini-2.5-flash` by default (override with `GEMINI_MODEL`)
+- Model: `gemini-3.8-flash` by default (override with `GEMINI_MODEL`)
 
 ## Run locally
 

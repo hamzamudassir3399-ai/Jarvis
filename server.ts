@@ -12,7 +12,11 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const DEFAULT_MODELS = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-flash-latest'];
+const MODELS = Array.from(
+  new Set([...(process.env.GEMINI_MODEL ? process.env.GEMINI_MODEL.split(',') : []), ...DEFAULT_MODELS].map((m) => m.trim()).filter(Boolean)),
+);
+const MODEL = MODELS[0];
 
 app.use(express.json({ limit: '5mb' }));
 
@@ -35,8 +39,43 @@ Rules:
 - Be proactive: if a task seems time-sensitive, offer to set a reminder.`;
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, configured: Boolean(ai), model: MODEL });
+  res.json({ ok: true, configured: Boolean(ai), model: MODEL, models: MODELS });
 });
+
+function isRetryable(error: any): boolean {
+  const msg = String(error?.message ?? '');
+  const code = error?.status ?? error?.code ?? (msg.match(/"code":\s*(\d{3})/)?.[1] && Number(msg.match(/"code":\s*(\d{3})/)![1]));
+  return [404, 429, 500, 503].includes(Number(code));
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Tries each configured model in turn, with one retry, so a 503 "high demand" on one model does not fail the request. */
+async function generateWithFallback(client: GoogleGenAI, contents: Content[], systemInstruction: string) {
+  let lastError: any;
+  for (const model of MODELS) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const response = await client.models.generateContent({
+          model,
+          contents,
+          config: {
+            systemInstruction,
+            tools: [{ functionDeclarations: toolDeclarations }],
+            temperature: 0.4,
+          },
+        });
+        return { response, model };
+      } catch (error: any) {
+        lastError = error;
+        if (!isRetryable(error)) throw error;
+        console.warn(`Gemini ${model} attempt ${attempt + 1} failed: ${String(error?.message).slice(0, 160)}`);
+        if (attempt === 0) await sleep(800);
+      }
+    }
+  }
+  throw lastError;
+}
 
 app.post('/api/chat', async (req, res) => {
   if (!ai) {
@@ -51,21 +90,18 @@ app.post('/api/chat', async (req, res) => {
   }
 
   try {
-    const response = await ai.models.generateContent({
-      model: MODEL,
+    const { response, model } = await generateWithFallback(
+      ai,
       contents,
-      config: {
-        systemInstruction: `${SYSTEM_PROMPT}\n\nCurrent local date/time: ${now ?? new Date().toString()}`,
-        tools: [{ functionDeclarations: toolDeclarations }],
-        temperature: 0.4,
-      },
-    });
+      `${SYSTEM_PROMPT}\n\nCurrent local date/time: ${now ?? new Date().toString()}`,
+    );
 
     const content = response.candidates?.[0]?.content ?? { role: 'model', parts: [] };
     res.json({
       content,
       text: response.text ?? '',
       functionCalls: response.functionCalls ?? [],
+      model,
     });
   } catch (error: any) {
     console.error('Gemini chat error:', error);
@@ -89,7 +125,7 @@ async function startServer() {
   }
 
   app.listen(port, '0.0.0.0', () => {
-    console.log(`Jarvis running on http://localhost:${port} (model: ${MODEL}, key: ${ai ? 'set' : 'MISSING'})`);
+    console.log(`Jarvis running on http://localhost:${port} (models: ${MODELS.join(' > ')}, key: ${ai ? 'set' : 'MISSING'})`);
   });
 }
 
